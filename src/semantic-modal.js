@@ -103,7 +103,7 @@
         $modal.appendTo("body");
     };
 
-    // http://stackoverflow.com/a/105074 
+    // http://stackoverflow.com/a/105074
     function guid() {
         function s4() {
             return Math.floor((1 + Math.random()) * 0x10000)
@@ -135,23 +135,20 @@
             options.instanceId = getModalUniqeId("modal-");
         }
 
-        this.CurrentSettings = options;
-        var currentSettings = this.CurrentSettings;
+        this.currentSettings = options;
 
         Object.defineProperty(this, "instanceId", {
             get: function () {
-                if (currentSettings) {
-                    return currentSettings.instanceId;
+                var self = this;
+                if (self.currentSettings) {
+                    return self.currentSettings.instanceId;
                 }
                 return undefined;
-            },
-            set: function (id) {
-                currentSettings.instanceId = id;
             }
         });
 
         // create modal base element
-        createModal(this.CurrentSettings);
+        createModal(this.currentSettings);
 
         if (DEBUG === true) {
             console.info("New instance created for SemanticModal -> " + this.instanceId);
@@ -199,8 +196,8 @@
         },
 
         setClosable: function (value) {
-            if (this.CurrentSettings) {
-                this.CurrentSettings.closable = value;
+            if (this.currentSettings) {
+                this.currentSettings.closable = value;
             }
 
             // remove close icon
@@ -216,17 +213,17 @@
         },
 
         setTransition: function (value) {
-            if (this.CurrentSettings) {
-                this.CurrentSettings.transition = value;
+            if (this.currentSettings) {
+                this.currentSettings.transition = value;
             }
         },
 
         setCallbacks: function (accept, reject, hide, show) {
-            if (this.CurrentSettings) {
-                this.CurrentSettings.accept = accept;
-                this.CurrentSettings.reject = reject;
-                this.CurrentSettings.hide = hide;
-                this.CurrentSettings.show = show;
+            if (this.currentSettings) {
+                this.currentSettings.accept = accept;
+                this.currentSettings.reject = reject;
+                this.currentSettings.hide = hide;
+                this.currentSettings.show = show;
             }
         },
 
@@ -260,29 +257,29 @@
             var self = this;
             return $(modal)
                 .modal({
-                    closable: self.CurrentSettings.closable,
-                    inverted: self.CurrentSettings.inverted,
-                    blurring: self.CurrentSettings.blurring,
-                    transition: self.CurrentSettings.transition,
+                    closable: self.currentSettings.closable,
+                    inverted: self.currentSettings.inverted,
+                    blurring: self.currentSettings.blurring,
+                    transition: self.currentSettings.transition,
                     onDeny: function ($element) {
-                        if ($.isFunction(self.CurrentSettings.reject)) {
-                            self.CurrentSettings.reject($element);
+                        if ($.isFunction(self.currentSettings.reject)) {
+                            self.currentSettings.reject($element);
                         }
                         return false;
                     },
                     onApprove: function ($element) {
-                        if ($.isFunction(self.CurrentSettings.accept)) {
-                            self.CurrentSettings.accept($element);
+                        if ($.isFunction(self.currentSettings.accept)) {
+                            self.currentSettings.accept($element);
                         }
                     },
                     onHidden: function () {
-                        if ($.isFunction(self.CurrentSettings.hide)) {
-                            self.CurrentSettings.hide();
+                        if ($.isFunction(self.currentSettings.hide)) {
+                            self.currentSettings.hide();
                         }
                     },
                     onShow: function () {
-                        if ($.isFunction(self.CurrentSettings.show)) {
-                            self.CurrentSettings.show();
+                        if ($.isFunction(self.currentSettings.show)) {
+                            self.currentSettings.show();
                         }
                     }
                 })
