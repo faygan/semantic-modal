@@ -93,9 +93,13 @@
 
     function createModal(options) {
         var $modal = initModal(options);
-        if (options.closeIcon === true && options.closable) {
-            initModalCloseIcon($modal);
+
+        if (options.closable) {
+            if (options.closeIcon === true) {
+                initModalCloseIcon($modal);
+            }
         }
+
         initModalHeader($modal, options);
         initModalContent($modal);
         initModalActions($modal, options);
@@ -257,6 +261,8 @@
             var self = this;
             return $(modal)
                 .modal({
+                    debug: DEBUG,
+
                     closable: self.currentSettings.closable,
                     inverted: self.currentSettings.inverted,
                     blurring: self.currentSettings.blurring,
