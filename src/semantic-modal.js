@@ -4,14 +4,18 @@
 
     var DEBUG = true;
 
-    function initModal(options) {
-        var $modal = $("<div class='ui modal'>");
-        $modal.attr("id", options.instanceId);
+    function initModal(options, elemId) {
+        var $modal = $("<div class='ui small modal'>");
+        $modal.attr("id", elemId);
         return $modal;
     };
 
-    function initModalCloseIcon($modal) {
-        $modal.append("<i class='close icon'></i>");
+    function initModalCloseIcon($modal, closable, closeIcon) {
+        if (closable) {
+            if (closeIcon === true) {
+                $modal.append("<i class='close icon'></i>");
+            }
+        }
     };
 
     function initModalHeader($modal, options) {
@@ -23,6 +27,9 @@
     };
 
     function setButtons(instanceId, $actionContext, buttonsArray) {
+        if (!$actionContext)
+            return;
+
         if (!Array.isArray(buttonsArray)) {
             if (buttonsArray === null) {
                 // remove all buttons
@@ -30,8 +37,6 @@
             }
             return;
         }
-        if (!$actionContext)
-            return;
 
         // first, clear button items..
         $actionContext.empty();
@@ -48,26 +53,29 @@
                     var bt = SemanticModal.buttonTypes[type];
                     if (bt) {
                         $button.addClass(bt);
-                    } else {
-                        $button.addClass(type);
                     }
                 });
             };
 
+            // additional css class for button 
+            if (!$.isEmptyObject(button.cssClass)) {
+                $button.addClass(button.cssClass);
+            }
+
             $button.addClass("button");
 
             // set button class for icon
-            if (button.icon !== undefined) {
-                $button.append($("<i></i>").addClass(button.icon));
+            if (button.iconClass !== undefined) {
+                $button.append($("<i></i>").addClass(button.iconClass));
             }
 
             // set button click callback
             if ($.isFunction(button.action)) {
-                $button.on("click", button.action.call({
+                $button.on("click", {
                     modalId: instanceId,
                     button: $button,
                     context: $actionContext
-                }));
+                }, button.action);
             }
 
             $actionContext.append($button);
@@ -82,27 +90,24 @@
         }
     };
 
-    function initModalActions($modal, options) {
+    function initModalActions($modal, options, elemId) {
+        if (options.buttonLess)
+            return;
+
         var $actions = $("<div class='actions'></div>");
 
         // set action buttons
-        setButtons(options.instanceId, $actions, options.defaultButtons);
+        setButtons(elemId, $actions, options.defaultButtons);
 
         $modal.append($actions);
     };
 
-    function createModal(options) {
-        var $modal = initModal(options);
-
-        if (options.closable) {
-            if (options.closeIcon === true) {
-                initModalCloseIcon($modal);
-            }
-        }
-
+    function createModal(options, instanceId) {
+        var $modal = initModal(options, instanceId);
+        initModalCloseIcon($modal, options);
         initModalHeader($modal, options);
         initModalContent($modal);
-        initModalActions($modal, options);
+        initModalActions($modal, options, instanceId);
 
         $modal.appendTo("body");
     };
@@ -132,27 +137,26 @@
         return preval;
     };
 
-    function SemanticModal(settings) {
-        var options = $.extend({}, this.defaultSettings, settings);
+    function SemanticModal(fixedSettings) {
+        var currentSettings = $.extend({}, this.defaultSettings, fixedSettings);
 
-        if (!options.instanceId) {
-            options.instanceId = getModalUniqeId("modal-");
-        }
+        var modalId = getModalUniqeId("modal-");
 
-        this.currentSettings = options;
-
+        // read-only properties
         Object.defineProperty(this, "instanceId", {
             get: function () {
-                var self = this;
-                if (self.currentSettings) {
-                    return self.currentSettings.instanceId;
-                }
-                return undefined;
+                return modalId;
+            }
+        });
+
+        Object.defineProperty(this, "thisSettings", {
+            get: function () {
+                return fixedSettings;
             }
         });
 
         // create modal base element
-        createModal(this.currentSettings);
+        createModal(currentSettings, this.instanceId);
 
         if (DEBUG === true) {
             console.info("New instance created for SemanticModal -> " + this.instanceId);
@@ -178,114 +182,168 @@
             return $(modal).find("div.actions");
         },
 
-        setTitle: function (title) {
+        getModalButtons: function () {
+            var modal = this.getModal();
+            if (modal !== undefined) {
+                var $context = this.getModalAction(modal);
+                if ($context) {
+                    return $context.find("div.ui.button");
+                }
+            }
+            return [];
+        },
+
+        getSettings: function (settings) {
+            return $.extend({},
+                SemanticModal.prototype.defaultSettings,
+                this.thisSettings,
+                settings);
+        },
+
+        setHeader: function (text) {
             var modal = this.getModal();
             if (modal) {
                 var $header = this.getModalHeader(modal);
                 if ($header) {
-                    $header.text(title);
+                    $header.text(text);
                 }
-                return $(modal);
             }
-            return undefined;
+            return this;
+        },
+
+        setActions: function (options) {
+            var settings = $.extend({}, this.defaultSettings, options);
+            var modal = this.getModal();
+            if (modal) {
+                if (settings.buttonLess) {
+                    $(modal).find("div.actions").remove();
+                } else {
+                    var $context = this.getModalAction(modal);
+                    if ($context.length <= 0) {
+                        initModalActions($(modal), settings, this.instanceId);
+                    }
+                }
+            }
+            return this;
         },
 
         setButtons: function (buttons) {
             var modal = this.getModal();
             if (modal) {
                 setButtons(this.instanceId, this.getModalAction(modal), buttons);
-                return $(modal);
             }
-            return undefined;
+            return this;
         },
 
-        setClosable: function (value) {
-            if (this.currentSettings) {
-                this.currentSettings.closable = value;
-            }
-
-            // remove close icon
+        setClosable: function (closable, closeIcon) {
             var modal = this.getModal();
-
             if (modal) {
-                if (value === true) {
-                    initModalCloseIcon($(modal));
+                if (true === closable) {
+                    initModalCloseIcon($(modal), closable, closeIcon);
                 } else {
                     $(modal).find("i").remove(".close.icon");
                 }
             }
+
+            return this;
         },
 
-        setTransition: function (value) {
-            if (this.currentSettings) {
-                this.currentSettings.transition = value;
-            }
-        },
+        show: function (message, settings) {
+            var currentSettings = this.getSettings(settings);
 
-        setCallbacks: function (accept, reject, hide, show) {
-            if (this.currentSettings) {
-                this.currentSettings.accept = accept;
-                this.currentSettings.reject = reject;
-                this.currentSettings.hide = hide;
-                this.currentSettings.show = show;
-            }
-        },
+            this.reset(currentSettings);
 
-        show: function (message) {
             var modal = this.getModal();
             if (modal) {
                 setMessage(this.getModalContent(modal), message);
-                setButtons(this.instanceId, this.getModalAction(modal), this.defaultSettings.defaultButtons);
-                return this.launch(modal);
+                if (!currentSettings.buttonLess) {
+                    setButtons(this.instanceId, this.getModalAction(modal), settings.defaultButtons);
+                }
+                this.launch(modal, currentSettings);
             }
-            return undefined;
+            return this;
         },
 
-        confirm: function (message) {
+        // modal set to not closable
+        showModal: function (message, settings) {
+            settings = $.extend(settings, {
+                closable: false,
+                closeIcon: false
+            });
+            return this.show(message, settings);
+        },
+
+        confirm: function (message, settings) {
+            var currentSettings = this.getSettings(settings);
+
+            this.reset(currentSettings);
+
             var modal = this.getModal();
             if (modal) {
                 setMessage(this.getModalContent(modal), message);
-                setButtons(this.instanceId, this.getModalAction(modal), this.defaultSettings.confirmButtons);
-                return this.launch(modal);
+                if (!currentSettings.buttonLess) {
+                    setButtons(this.instanceId, this.getModalAction(modal), settings.confirmButtons);
+                }
+                this.launch(modal, currentSettings);
             }
-            return undefined;
+            return this;
         },
 
-        setModal: function (settings) {
-            var modal = this.getModal();
-            // todo:
-            return $(modal);
+        // modal set to not closable
+        confirmModal: function (message, settings) {
+            settings = $.extend(settings, {
+                closable: false,
+                closeIcon: false
+            });
+            return this.confirm(message, settings);
         },
 
-        launch: function (modal) {
+        reset: function (settings) {
+            var currentSettings = this.getSettings(settings);
+            this
+                .setClosable(currentSettings.closable, currentSettings.closeIcon)
+                .setHeader(currentSettings.title)
+                .setActions(currentSettings)
+                .setButtons(currentSettings.defaultButtons)
+            ;
+
+            return this;
+        },
+
+        launch: function (modal, settings) {
             var self = this;
+            var launchSettings = this.getSettings(settings);
             return $(modal)
                 .modal({
                     debug: DEBUG,
 
-                    closable: self.currentSettings.closable,
-                    inverted: self.currentSettings.inverted,
-                    blurring: self.currentSettings.blurring,
-                    transition: self.currentSettings.transition,
+                    transition: launchSettings.transition,
+                    inverted: launchSettings.inverted,
+                    blurring: launchSettings.blurring,
+
+                    closable: launchSettings.closable,
+
                     onDeny: function ($element) {
-                        if ($.isFunction(self.currentSettings.reject)) {
-                            self.currentSettings.reject($element);
+                        if ($.isFunction(launchSettings.reject)) {
+                            return launchSettings.reject($element);
                         }
-                        return false;
+                        return true;
                     },
                     onApprove: function ($element) {
-                        if ($.isFunction(self.currentSettings.accept)) {
-                            self.currentSettings.accept($element);
+                        if ($.isFunction(launchSettings.accept)) {
+                            return launchSettings.accept($element);
                         }
+                        return true;
                     },
                     onHidden: function () {
-                        if ($.isFunction(self.currentSettings.hide)) {
-                            self.currentSettings.hide();
+                        if ($.isFunction(launchSettings.hide)) {
+                            return launchSettings.hide();
                         }
+                        return true;
                     },
                     onShow: function () {
-                        if ($.isFunction(self.currentSettings.show)) {
-                            self.currentSettings.show();
+                        if ($.isFunction(launchSettings.show)) {
+                            launchSettings.show(self);
                         }
                     }
                 })
@@ -337,34 +395,38 @@
     };
 
     SemanticModal.prototype.defaultSettings = {
-        instanceId: undefined,
         title: window.location.hostname,
+        transition: SemanticModal.transitionTypes.scale,
+        blurring: false,
+        inverted: false,
         closeIcon: true,
         closable: true,
-        inverted: false,
-        blurring: false,
-        transition: SemanticModal.transitionTypes.scale,
+        buttonLess: false,
         defaultButtons: new Array(
             {
                 actionTypes: [SemanticModal.buttonTypes.ok],
+                cssClass: "",
                 title: "Ok",
-                icon: undefined,
+                iconClass: undefined,
                 action: undefined
             }),
         confirmButtons: [
                     {
-                        actionTypes: [SemanticModal.buttonTypes.positive, "right", "labeled", "icon"],
+                        actionTypes: [SemanticModal.buttonTypes.positive],
+                        cssClass: "", //"right labeled icon"
                         title: "Ok",
-                        icon: "checkmark icon",
+                        iconClass: "", //"checkmark icon"
                         action: undefined
                     },
                     {
-                        actionTypes: [SemanticModal.buttonTypes.negative, SemanticModal.buttonTypes.cancel],
+                        actionTypes: [SemanticModal.buttonTypes.cancel],
+                        cssClass: "",
                         title: "Cancel",
-                        icon: undefined,
+                        iconClass: undefined,
                         action: undefined
                     }
         ],
+        // modal events delegates
         accept: undefined,
         reject: undefined,
         hide: undefined,
