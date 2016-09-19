@@ -42,19 +42,28 @@
         $actionContext.empty();
 
         buttonsArray.forEach(function (button) {
+
+            // check required for button creation
+            if ($.isFunction(button.checkBefore)) {
+                var validButton = button.checkBefore(button);
+                if (validButton === false)
+                    return;
+            }
+            
             var $button = $("<div></div>")
                 .text(button.title)
                 .addClass("small");
 
             var cssOnly = false;
+            var cssClassArray = [];
 
             if (button.cssClass) {
                 if (button.cssClass.startsWith("ui")) {
                     cssOnly = true;
                 }
-            }
 
-            var cssClassArray = button.cssClass.split(" ");
+                cssClassArray = button.cssClass.split(" ");
+            }
 
             // apply semantic-ui pre-defined button class (SemanticModal.buttonTypes)
             if (!cssOnly) {
