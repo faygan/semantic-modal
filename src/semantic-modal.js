@@ -44,37 +44,60 @@
         buttonsArray.forEach(function (button) {
             var $button = $("<div></div>")
                 .text(button.title)
-                .addClass("ui");
+                .addClass("small");
 
-            if (button.actionTypes) {
+            var cssOnly = false;
 
-                // set buttons base classes
-                button.actionTypes.forEach(function (type) {
-                    var bt = SemanticModal.buttonTypes[type];
-                    if (bt) {
-                        $button.addClass(bt);
-                    }
-                });
-            };
-
-            // additional css class for button 
-            if (!$.isEmptyObject(button.cssClass)) {
-                $button.addClass(button.cssClass);
+            if (button.cssClass) {
+                if (button.cssClass.startsWith("ui")) {
+                    cssOnly = true;
+                }
             }
 
-            $button.addClass("button");
+            var cssClassArray = button.cssClass.split(" ");
+
+            // apply semantic-ui pre-defined button class (SemanticModal.buttonTypes)
+            if (!cssOnly) {
+                $button.addClass("ui");
+
+                if (button.actionTypes) {
+                    // set buttons base classes
+                    button.actionTypes.forEach(function (type) {
+                        var bt = SemanticModal.buttonTypes[type];
+                        if (bt) {
+                            $button.addClass(bt);
+                        }
+                    });
+                };
+
+                cssClassArray.forEach(function (item) {
+                    $button.addClass(item);
+                });
+
+                $button.addClass("button");
+            } else {
+                // apply css class for this button 
+                cssClassArray.forEach(function (classItem) {
+                    $button.addClass(classItem);
+                });
+            }
 
             // set button class for icon
             if (button.iconClass !== undefined) {
                 $button.append($("<i></i>").addClass(button.iconClass));
             }
 
+            // set button element name
+            if (button.name) {
+                $button.attr("name", button.name);
+            }
+
             // set button click callback
             if ($.isFunction(button.action)) {
                 $button.on("click", {
                     modalId: instanceId,
-                    button: $button,
-                    context: $actionContext
+                    $button: $button,
+                    $actionContext: $actionContext
                 }, button.action);
             }
 
@@ -257,7 +280,7 @@
             if (modal) {
                 setMessage(this.getModalContent(modal), message);
                 if (!currentSettings.buttonLess) {
-                    setButtons(this.instanceId, this.getModalAction(modal), settings.defaultButtons);
+                    setButtons(this.instanceId, this.getModalAction(modal), currentSettings.defaultButtons);
                 }
                 this.launch(modal, currentSettings);
             }
@@ -282,7 +305,7 @@
             if (modal) {
                 setMessage(this.getModalContent(modal), message);
                 if (!currentSettings.buttonLess) {
-                    setButtons(this.instanceId, this.getModalAction(modal), settings.confirmButtons);
+                    setButtons(this.instanceId, this.getModalAction(modal), currentSettings.confirmButtons);
                 }
                 this.launch(modal, currentSettings);
             }
@@ -362,6 +385,7 @@
         "close": "close"
     };
 
+    // semanti-ui transition type enums
     SemanticModal.transitionTypes = {
         "scale": "scale",
         "fade": "fade",
@@ -394,6 +418,11 @@
         "bounce": "bounce"
     };
 
+    // pre-defined button name constants
+    SemanticModal.BUTTON_DEFAULT_OK = "DEFAULT_OK";
+    SemanticModal.BUTTON_CONFIRM_OK = "CONFIRM_OK";
+    SemanticModal.BUTTON_CONFIRM_CANCEL = "CONFIRM_CANCEL";
+
     SemanticModal.prototype.defaultSettings = {
         title: window.location.hostname,
         transition: SemanticModal.transitionTypes.scale,
@@ -404,26 +433,31 @@
         buttonLess: false,
         defaultButtons: new Array(
             {
+                name: SemanticModal.BUTTON_DEFAULT_OK,
                 actionTypes: [SemanticModal.buttonTypes.ok],
                 cssClass: "",
                 title: "Ok",
                 iconClass: undefined,
-                action: undefined
+                action: undefined,
+                checkBefore: undefined
             }),
         confirmButtons: [
                     {
+                        name: SemanticModal.BUTTON_CONFIRM_OK,
                         actionTypes: [SemanticModal.buttonTypes.positive],
-                        cssClass: "", //"right labeled icon"
+                        cssClass: "", // sample button class: "right labeled icon"
                         title: "Ok",
-                        iconClass: "", //"checkmark icon"
-                        action: undefined
+                        iconClass: "", // sample icon class: "checkmark icon"
+                        action: undefined,
+                        checkBefore: undefined
                     },
                     {
-                        actionTypes: [SemanticModal.buttonTypes.cancel],
-                        cssClass: "",
+                        name: SemanticModal.BUTTON_CONFIRM_CANCEL,
+                        cssClass: "ui basic red cancel button",
                         title: "Cancel",
                         iconClass: undefined,
-                        action: undefined
+                        action: undefined,
+                        checkBefore: undefined
                     }
         ],
         // modal events delegates
