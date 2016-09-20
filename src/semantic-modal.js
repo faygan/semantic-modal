@@ -26,7 +26,12 @@
         $modal.append($("<div class='content'></div>"));
     };
 
-    function setButtons(instanceId, $actionContext, buttonsArray) {
+    function setButtons(modalInstance, buttonsArray) {
+        var modal = modalInstance.getModal();
+        if (!modal)
+            return;
+
+        var $actionContext = modalInstance.getModalAction(modal);
         if (!$actionContext)
             return;
 
@@ -49,7 +54,7 @@
                 if (validButton === false)
                     return;
             }
-            
+
             var $button = $("<div></div>")
                 .text(button.title)
                 .addClass("small");
@@ -104,9 +109,8 @@
             // set button click callback
             if ($.isFunction(button.action)) {
                 $button.on("click", {
-                    modalId: instanceId,
-                    $button: $button,
-                    $actionContext: $actionContext
+                    modalInstance: modalInstance,
+                    $button: $button
                 }, button.action);
             }
 
@@ -114,32 +118,23 @@
         });
     };
 
-    function setMessage($modalContent, message) {
-        if ($modalContent) {
-            $modalContent
-                .empty()
-                .append($("<p></p>").text(message));
-        }
-    };
-
-    function initModalActions($modal, options, elemId) {
+    function initModalActions($modal, options, modalInstance) {
         if (options.buttonLess)
             return;
 
         var $actions = $("<div class='actions'></div>");
+        $modal.append($actions);
 
         // set action buttons
-        setButtons(elemId, $actions, options.defaultButtons);
-
-        $modal.append($actions);
+        setButtons(modalInstance, options.defaultButtons);
     };
 
-    function createModal(options, instanceId) {
-        var $modal = initModal(options, instanceId);
+    function createModal(options, instance) {
+        var $modal = initModal(options, instance.instanceId);
         initModalCloseIcon($modal, options);
         initModalHeader($modal, options);
         initModalContent($modal);
-        initModalActions($modal, options, instanceId);
+        initModalActions($modal, options, instance);
 
         $modal.appendTo("body");
     };
@@ -188,7 +183,7 @@
         });
 
         // create modal base element
-        createModal(currentSettings, this.instanceId);
+        createModal(currentSettings, this);
 
         if (DEBUG === true) {
             console.info("New instance created for SemanticModal -> " + this.instanceId);
@@ -202,8 +197,8 @@
             return document.getElementById(this.instanceId);
         },
 
-        getModalContent: function (modal) {
-            return $(modal).find("div.content");
+        getModalContent: function () {
+            return $(this.getModal()).find("div.content");
         },
 
         getModalHeader: function (modal) {
@@ -252,7 +247,7 @@
                 } else {
                     var $context = this.getModalAction(modal);
                     if ($context.length <= 0) {
-                        initModalActions($(modal), settings, this.instanceId);
+                        initModalActions($(modal), settings, this);
                     }
                 }
             }
@@ -260,10 +255,7 @@
         },
 
         setButtons: function (buttons) {
-            var modal = this.getModal();
-            if (modal) {
-                setButtons(this.instanceId, this.getModalAction(modal), buttons);
-            }
+            setButtons(this, buttons);
             return this;
         },
 
@@ -280,6 +272,16 @@
             return this;
         },
 
+        setMessage: function (message) {
+            var $modalContent = this.getModalContent();
+            if ($modalContent) {
+                $modalContent
+                    .empty()
+                    .css("overflow", "auto")
+                    .append($("<p></p>").html(message));
+            }
+        },
+
         show: function (message, settings) {
             var currentSettings = this.getSettings(settings);
 
@@ -287,9 +289,9 @@
 
             var modal = this.getModal();
             if (modal) {
-                setMessage(this.getModalContent(modal), message);
+                this.setMessage(message);
                 if (!currentSettings.buttonLess) {
-                    setButtons(this.instanceId, this.getModalAction(modal), currentSettings.defaultButtons);
+                    setButtons(this, currentSettings.defaultButtons);
                 }
                 this.launch(modal, currentSettings);
             }
@@ -312,9 +314,9 @@
 
             var modal = this.getModal();
             if (modal) {
-                setMessage(this.getModalContent(modal), message);
+                this.setMessage(message);
                 if (!currentSettings.buttonLess) {
-                    setButtons(this.instanceId, this.getModalAction(modal), currentSettings.confirmButtons);
+                    setButtons(this, currentSettings.confirmButtons);
                 }
                 this.launch(modal, currentSettings);
             }
